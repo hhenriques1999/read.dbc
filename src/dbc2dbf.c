@@ -54,8 +54,8 @@ static int outf(void *how, unsigned char *buf, unsigned len)
 
 /* Close open files before exit */
 void cleanup(FILE* input, FILE* output) {
-    if( input  ) fclose(input);
-    if( output ) fclose(output);
+    if( input != NULL ) fclose(input);
+    if( output != NULL ) fclose(output);
 }
 
 /*
@@ -65,10 +65,11 @@ void cleanup(FILE* input, FILE* output) {
     Please provide fully qualified names, including file extension.
  */
 void dbc2dbf(char** input_file, char** output_file) {
-    FILE          *input = 0, *output = 0;
+    FILE          *input = NULL, *output = NULL;
     int           ret = 0;
     unsigned char rawHeader[2];
     uint16_t      header = 0;
+    unsigned char *buf = NULL;
 
     /* Open input file */
     input  = fopen(input_file[0], "rb");
@@ -103,17 +104,23 @@ void dbc2dbf(char** input_file, char** output_file) {
     rewind(input);
 
     /* Copy file header from input to output */
-    unsigned char buf[header];
+    buf = (unsigned char *)malloc(header);
+    if (buf == NULL) {
+        cleanup(input, output);
+        error("Memory allocation failed for buffer");
+    }
 
     ret = fread(buf, 1, header, input);
     if( ferror(input) ) {
         cleanup(input, output);
+        free(buf);
         error("Error reading input file %s: %s", input_file[0], strerror(errno));
     }
 
     ret = fwrite(buf, 1, header, output);
     if( ferror(output) ) {
         cleanup(input, output);
+        free(buf);
         error("Error writing output file %s: %s", output_file[0], strerror(errno));
     }
 
@@ -137,6 +144,10 @@ void dbc2dbf(char** input_file, char** output_file) {
         cleanup(input, output);
         error("blast warning: %d unused bytes of input\n", n);
     }
+
+    // Free allocated memory
+
+    free(buf);
 
     cleanup(input, output);
 }
