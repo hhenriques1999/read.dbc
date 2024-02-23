@@ -60,6 +60,7 @@ read.dbc <- function(file, ...) {
 
                 # Delete temp file
                 file.remove(out)
+                rm(out)
 
                 # Return data frame
                 return(df)
